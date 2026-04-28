@@ -256,8 +256,6 @@ function confirmar() {
   setTimeout(() => {
     try {
       const dtBR = dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
-      const doc     = gerarPDF();
-      const pdfB64  = doc.output('datauristring').split(',')[1]; // base64 puro
 
       // Inicializar EmailJS com chave pública
       emailjs.init('X4S7eQZAL3eSRtmijOxYY');
@@ -275,9 +273,7 @@ function confirmar() {
         despesas:    dados.despesas_str || '—',
         pagamento:   fmt(dados.pagamento_liquido||0),
         data_hora:   dtBR,
-        assinatura:  assinaturaDataUrl,   // imagem da assinatura inline
-        pdf_base64:  pdfB64,              // PDF como anexo
-        pdf_nome:    'fechamento_' + (dados.motorista||'').split(' ')[0] + '_env' + dados.envelope + '.pdf'
+        assinatura:  assinaturaDataUrl
       };
 
       emailjs.send('service_ms29wao', 'template_ry3210s', templateParams)
