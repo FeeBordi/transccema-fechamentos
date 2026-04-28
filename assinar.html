@@ -196,6 +196,16 @@ function confirmar() {
   try {
     const dtBR = new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
     emailjs.init('m7evVV_nw-qO8ejln');
+    // Reduzir assinatura para 400x130px antes de enviar (cabe no plano gratuito)
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width  = 400;
+    offCanvas.height = 130;
+    const offCtx = offCanvas.getContext('2d');
+    offCtx.fillStyle = '#ffffff';
+    offCtx.fillRect(0, 0, 400, 130);
+    offCtx.drawImage(canvas, 0, 0, 400, 130);
+    const assinaturaReduzida = offCanvas.toDataURL('image/jpeg', 0.7);
+
     emailjs.send('service_ms29wao', 'template_ry3210s', {
       subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
       motorista:   dados.motorista  || '—',
@@ -207,7 +217,8 @@ function confirmar() {
       adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
       despesas:    dados.despesas_str || '—',
       pagamento:   fmt(dados.pagamento_liquido||0),
-      data_hora:   dtBR
+      data_hora:   dtBR,
+      assinatura:  assinaturaReduzida
     })
     .then(r  => console.log('Email OK:', r.status))
     .catch(e => console.warn('Email erro:', e));
