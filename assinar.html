@@ -252,16 +252,14 @@ function confirmar() {
     try { baixarPDF(); } catch(e){ console.warn('PDF:', e); }
   }, 500);
 
-  // 2. Gerar PDF e enviar por email via EmailJS (suporta anexo PDF)
+  // 2. Enviar email via EmailJS
   setTimeout(() => {
     try {
-      const dtBR = dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
+      const dtBR = dataHoraAssn.toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
 
-      // Inicializar EmailJS com chave pública
       emailjs.init('X4S7eQZAL3eSRtmijOxYY');
 
-      const templateParams = {
-        to_email:    'felipe@transccema.com.br',
+      emailjs.send('service_ms29wao', 'template_ry3210s', {
         subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
         motorista:   dados.motorista  || '—',
         envelope:    dados.envelope   || '—',
@@ -274,21 +272,29 @@ function confirmar() {
         pagamento:   fmt(dados.pagamento_liquido||0),
         data_hora:   dtBR,
         assinatura:  assinaturaDataUrl
-      };
+      })
+      .then(resp => {
+        console.log('EmailJS OK:', resp.status, resp.text);
+        const el = document.getElementById('notif-status');
+        if(el) {
+          el.style.display = 'block';
+          el.style.color   = '#4ade80';
+          el.textContent   = '📧 Email enviado para felipe@transccema.com.br';
+        }
+      })
+      .catch(err => {
+        console.error('EmailJS ERRO:', JSON.stringify(err));
+        const el = document.getElementById('notif-status');
+        if(el) {
+          el.style.display = 'block';
+          el.style.color   = '#fca5a5';
+          el.textContent   = '⚠️ Erro: ' + JSON.stringify(err);
+        }
+      });
 
-      emailjs.send('service_ms29wao', 'template_ry3210s', templateParams)
-        .then(() => {
-          const el = document.getElementById('notif-status');
-          if(el){el.style.display='block';el.style.color='#4ade80';
-            el.textContent='📧 Email com PDF enviado para felipe@transccema.com.br';}
-        })
-        .catch(err => {
-          console.warn('EmailJS erro:', err);
-          const el = document.getElementById('notif-status');
-          if(el){el.style.display='block';el.style.color='#fca5a5';
-            el.textContent='⚠️ Erro ao enviar email: ' + JSON.stringify(err);}
-        });
-    } catch(e){ console.warn('Email PDF:', e); }
+    } catch(e) {
+      console.error('Email catch:', e);
+    }
   }, 1200);
 
   window.scrollTo({top:0,behavior:'smooth'});
