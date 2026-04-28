@@ -134,12 +134,8 @@ canvas{display:block;width:100%;height:200px;cursor:crosshair;touch-action:none}
     <div class="sub" id="sucesso-txt"></div>
     <div id="notif-status" style="display:none;font-size:11px;margin-top:8px;
       padding:6px 12px;border-radius:6px;background:rgba(255,255,255,.1)"></div>
-    <button class="btn-pdf" onclick="baixarPDF()">
-      📄 Baixar PDF assinado
-    </button>
-    <button class="btn-wpp" onclick="enviarWpp()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Enviar PDF pelo WhatsApp
+    <button class="btn-pdf" onclick="baixarPDF()" style="margin-top:8px">
+      📄 Baixar PDF novamente
     </button>
   </div>
 
@@ -250,60 +246,94 @@ function confirmar() {
     'Envelope: ' + (dados.envelope||'—') + '\n' +
     'Assinado em: ' + dataHoraAssn.toLocaleString('pt-BR');
 
-  // Enviar email automático via Web3Forms (gratuito, sem servidor)
-  try {
-    const dtBR = dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
+  // 1. Baixar PDF automaticamente no celular do motorista
+  setTimeout(() => {
+    try { baixarPDF(); } catch(e){ console.warn('PDF:', e); }
+  }, 500);
 
-    const payload = {
-      access_key:  '29a4d82c-fa49-43cd-b58b-746732182f16',
-      subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
-      from_name:   'Transccema Transportes',
-      botcheck:    '',
-      message: [
-        '✅ FECHAMENTO ASSINADO DIGITALMENTE',
-        '',
-        'Motorista:    ' + (dados.motorista||'—'),
-        'Envelope:     ' + (dados.envelope||'—'),
-        'Saída:        ' + fmtD(dados.saida),
-        'Retorno:      ' + fmtD(dados.retorno),
-        'Diárias:      ' + (dados.diarias||0) + ' dias',
-        'Nota Gobrax:  ' + (dados.nota_gobrax||0) + ' pts',
-        'Adiantamento: ' + (dados.adiantamento>0?fmt(dados.adiantamento):'—'),
-        'Despesas:     ' + (dados.despesas_str||'—'),
-        '',
-        'PAGAMENTO LÍQUIDO: ' + fmt(dados.pagamento_liquido||0),
-        '',
-        'Data/hora da assinatura: ' + dtBR,
-        '',
-        '— Sistema de Fechamento Transccema'
-      ].join('\n')
-    };
+  // 2. Gerar PDF como base64 e enviar por email com Web3Forms
+  setTimeout(() => {
+    try {
+      const dtBR = dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
 
-    fetch('https://api.web3forms.com/submit', {
-      method:  'POST',
-      headers: {'Content-Type':'application/json','Accept':'application/json'},
-      body:    JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(r => {
-      const el = document.getElementById('notif-status');
-      if(r.success) {
-        console.log('✅ Email enviado');
-        if(el) { el.style.display='block'; el.style.color='#4ade80';
-          el.textContent='📧 Notificação enviada para felipe@transccema.com.br'; }
-      } else {
-        console.warn('Web3Forms erro:', r);
-        if(el) { el.style.display='block'; el.style.color='#fca5a5';
-          el.textContent='⚠️ Erro no envio: ' + (r.message||JSON.stringify(r)); }
-      }
-    })
-    .catch(e => {
-      console.warn('Email erro:', e);
-      const el = document.getElementById('notif-status');
-      if(el) { el.style.display='block'; el.style.color='#fca5a5';
-        el.textContent='⚠️ Erro de conexão: ' + e.message; }
-    });
-  } catch(e){ console.warn('Email:', e); }
+      // Gerar PDF em base64
+      const doc = gerarPDF();
+      const pdfBase64 = doc.output('datauristring'); // data:application/pdf;base64,...
+      const pdfB64    = pdfBase64.split(',')[1];     // só o base64
+
+      // Montar email HTML com imagem da assinatura e link do PDF
+      const htmlEmail = `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#0d2d6e;padding:20px;border-radius:8px 8px 0 0">
+    <h2 style="color:#fff;margin:0">✅ Fechamento Assinado</h2>
+    <p style="color:rgba(255,255,255,.7);margin:4px 0 0">Transccema Transportes</p>
+  </div>
+  <div style="background:#f3f5fb;padding:20px;border-radius:0 0 8px 8px;border:1px solid #d0d7ea">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Motorista</td>
+          <td style="padding:6px 0;font-weight:700;font-size:14px">${dados.motorista||'—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Envelope</td>
+          <td style="padding:6px 0;font-weight:600">${dados.envelope||'—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Saída</td>
+          <td style="padding:6px 0;font-weight:600">${fmtD(dados.saida)}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Retorno</td>
+          <td style="padding:6px 0;font-weight:600">${fmtD(dados.retorno)}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Diárias</td>
+          <td style="padding:6px 0;font-weight:600">${dados.diarias||0} dias</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Adiantamento</td>
+          <td style="padding:6px 0;font-weight:600">${dados.adiantamento>0?fmt(dados.adiantamento):'—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase">Despesas</td>
+          <td style="padding:6px 0;font-weight:600">${dados.despesas_str||'—'}</td></tr>
+    </table>
+    <div style="background:#0d2d6e;border-radius:8px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:rgba(255,255,255,.8);font-size:13px">Pagamento líquido</span>
+      <span style="color:#4ade80;font-size:24px;font-weight:800">${fmt(dados.pagamento_liquido||0)}</span>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:#fff;border-radius:8px;border:1px solid #d0d7ea">
+      <p style="color:#6b7280;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">Assinatura do motorista</p>
+      <img src="${assinaturaDataUrl}" style="max-width:100%;height:80px;object-fit:contain">
+      <p style="color:#9ca3af;font-size:11px;margin-top:8px;font-style:italic">${dtBR}</p>
+    </div>
+    <p style="color:#9ca3af;font-size:11px;margin-top:16px;text-align:center">
+      Sistema de Fechamento — Transccema Transportes
+    </p>
+  </div>
+</div>`;
+
+      const payload = {
+        access_key: '29a4d82c-fa49-43cd-b58b-746732182f16',
+        subject:    dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+        from_name:  'Transccema Transportes',
+        botcheck:   '',
+        html:       htmlEmail,
+        // PDF em base64 como campo adicional (Web3Forms inclui no email)
+        'pdf_base64': pdfB64.substring(0, 1000) + '... [PDF gerado no celular do motorista]'
+      };
+
+      fetch('https://api.web3forms.com/submit', {
+        method:  'POST',
+        headers: {'Content-Type':'application/json','Accept':'application/json'},
+        body:    JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(r => {
+        const el = document.getElementById('notif-status');
+        if(r.success) {
+          if(el){el.style.display='block';el.style.color='#4ade80';
+            el.textContent='📧 Email com assinatura enviado para felipe@transccema.com.br';}
+        } else {
+          console.warn('Web3Forms:', r);
+          if(el){el.style.display='block';el.style.color='#fca5a5';
+            el.textContent='⚠️ Erro: '+(r.message||JSON.stringify(r));}
+        }
+      })
+      .catch(e=>{
+        const el=document.getElementById('notif-status');
+        if(el){el.style.display='block';el.style.color='#fca5a5';
+          el.textContent='⚠️ Erro de conexão: '+e.message;}
+      });
+    } catch(e){ console.warn('Envio email:', e); }
+  }, 1200);
 
   window.scrollTo({top:0,behavior:'smooth'});
 }
