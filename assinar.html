@@ -207,8 +207,7 @@ function confirmar() {
       adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
       despesas:    dados.despesas_str || '—',
       pagamento:   fmt(dados.pagamento_liquido||0),
-      data_hora:   dtBR,
-      assinatura:  canvas.toDataURL('image/png')
+      data_hora:   dtBR
     })
     .then(r  => console.log('Email OK:', r.status))
     .catch(e => console.warn('Email erro:', e));
