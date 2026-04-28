@@ -202,12 +202,13 @@ function confirmar() {
       envelope:    dados.envelope   || '—',
       saida:       fmtD(dados.saida),
       retorno:     fmtD(dados.retorno),
-      diarias:     (dados.diarias||0) + ' dias',
-      nota_gobrax: (dados.nota_gobrax||0) + ' pts',
+      diarias:     String(dados.diarias||0) + ' dias',
+      nota_gobrax: String(dados.nota_gobrax||0) + ' pts',
       adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
       despesas:    dados.despesas_str || '—',
       pagamento:   fmt(dados.pagamento_liquido||0),
-      data_hora:   dtBR
+      data_hora:   dtBR,
+      assinatura:  canvas.toDataURL('image/png')
     })
     .then(r  => console.log('Email OK:', r.status))
     .catch(e => console.warn('Email erro:', e));
