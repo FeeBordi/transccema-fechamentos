@@ -111,7 +111,12 @@ let dados = null;
 try {
   const hash = window.location.hash.slice(1);
   if(!hash) throw new Error('sem dados');
-  dados = JSON.parse(decodeURIComponent(atob(hash)));
+  // Decode correto para suportar acentos
+    const bin   = atob(hash);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    const json  = new TextDecoder().decode(bytes);
+    dados = JSON.parse(json);
 } catch(e) {
   document.getElementById('erro').style.display = 'block';
 }
@@ -190,7 +195,7 @@ function confirmar() {
   // Enviar email para Felipe em background (motorista não vê isso)
   try {
     const dtBR = new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
-    emailjs.init('X4S7eQZAL3eSRtmijOxYY');
+    emailjs.init('m7evVV_nw-qO8ejln');
     emailjs.send('service_ms29wao', 'template_ry3210s', {
       subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
       motorista:   dados.motorista  || '—',
