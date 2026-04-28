@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Transccema — Assinar Fechamento</title>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--az:#0d2d6e;--az2:#1752a8;--vd:#16a34a;--vdc:#dcfce7;--vdt:#15803d;
+  --c1:#f3f5fb;--c2:#e8ecf5;--c3:#d0d7ea;--t1:#111827;--t2:#374151;--t3:#6b7280}
+body{background:var(--c1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--t1)}
+.topo{background:linear-gradient(125deg,#060f2e 0%,var(--az) 50%,var(--az2) 100%);
+  padding:14px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(13,45,110,.4)}
+.topo img{height:36px;border-radius:5px}
+.topo-nome{font-size:14px;font-weight:700;color:#fff}
+.topo-sub{font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.06em}
+.wrap{max-width:480px;margin:0 auto;padding:14px}
+.card{background:#fff;border-radius:12px;border:1px solid var(--c3);
+  box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px;overflow:hidden}
+.card-head{padding:10px 14px;background:var(--c1);border-bottom:1px solid var(--c3);
+  font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+.card-body{padding:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.lbl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.val{font-size:13px;font-weight:600;color:var(--t1)}
+.total-row{display:flex;justify-content:space-between;align-items:center;
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--c3)}
+.total-lbl{font-size:13px;font-weight:600;color:var(--t2)}
+.total-val{font-size:26px;font-weight:800;color:var(--vd)}
+.parada-item{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 10px;background:var(--c1);border-radius:7px;margin-bottom:5px;font-size:12px}
+.parada-cli{font-weight:600;color:var(--t1)}
+.parada-val{font-weight:700;color:var(--vd)}
+/* Canvas assinatura */
+.canvas-wrap{border:2px dashed var(--c3);border-radius:10px;overflow:hidden;
+  background:#f8f9ff;position:relative;margin-bottom:12px;transition:border-color .2s}
+.canvas-wrap.signed{border-color:#86efac;border-style:solid;background:#f0fdf4}
+canvas{display:block;width:100%;height:200px;cursor:crosshair;touch-action:none}
+.canvas-ph{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;pointer-events:none;transition:opacity .2s}
+.canvas-ph .ico{font-size:32px;display:block;margin-bottom:6px;opacity:.3}
+.canvas-ph .txt{font-size:13px;color:var(--c3);font-weight:500}
+/* Botões */
+.btns{display:flex;gap:8px;margin-bottom:4px}
+.btn{flex:1;padding:13px;border-radius:9px;border:none;cursor:pointer;
+  font-size:13px;font-weight:700;font-family:inherit;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-limpar{background:var(--c2);color:var(--t2)}
+.btn-confirmar{background:linear-gradient(135deg,var(--az) 0%,var(--az2) 100%);
+  color:#fff;font-size:14px}
+.btn-confirmar:disabled{opacity:.45;cursor:not-allowed;transform:none}
+/* Sucesso */
+.sucesso{display:none;background:linear-gradient(135deg,#052e16 0%,#14532d 100%);
+  border-radius:12px;padding:28px 20px;text-align:center;margin-bottom:12px}
+.sucesso .ico{font-size:48px;margin-bottom:12px}
+.sucesso .tit{font-size:18px;font-weight:800;color:#4ade80;margin-bottom:8px}
+.sucesso .sub{font-size:13px;color:rgba(255,255,255,.65);line-height:1.6;margin-bottom:16px}
+.btn-pdf{background:#4ade80;color:#052e16;border:none;padding:13px 24px;
+  border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;
+  width:100%;transition:all .15s}
+.btn-pdf:active{transform:scale(.97)}
+.btn-wpp{background:#25d366;color:#fff;border:none;padding:11px 24px;
+  border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  width:100%;margin-top:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.erro{display:none;background:#fef2f2;border-radius:12px;padding:20px;
+  text-align:center;border:1px solid #fca5a5;margin-bottom:12px;color:#dc2626;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAC0APoDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAECBggDBQcJBP/EAEUQAAEDAwICBQoDBQYFBQAAAAEAAgMEBREGEgchExQWMWEIFSJBUVJWYpTRMkJxGFNUgZEjkpOhotMJJGNyc1WCg6Oy/8QAGgEBAQADAQEAAAAAAAAAAAAAAAECAwQFBv/EACcRAAICAQQBBAMAAwAAAAAAAAABAhEDBBITMSEFFBVBIlFxUmGR/9oADAMBAAIRAxEAPwDU9R60BQr2DnfklFCkdytAIVBQIkCFIUIgLKCoRKBI70woU5RoEoVBQJQIUhQiAsoKhEoEjvTChTlGgShUFAlAhSFCICygqESgSO9MKFOUaBKFQUCUCERFQX2+CbfBWRKIU2+CbfBXRKFlNvgm3wV0ShZTb4KQ3wVkQWV2+CbVZEoNlNvgp2qyFWibioapwpQILK7fBC3wVkUotlNvgp2qyJQspt8FIb4KyK0LK7fBThSiEK7PFNnirIpRbKbfBSG+CsSitCyu3wTarIUoWVDVOFKILKbfBNvgropQsnCYVsJhbKMbKZWQ6W0PrPVLBJp3S13ucWcdLT0j3Rg5I5vxtHcfX6ls55NPk0QSUtLq7iPSCUyNbLR2eQEBre8PnHrJ5ER+r83sG21NBFTwMggjZFFG0NYxjQ1rQO4ADkAuLJqoxdR8myMW+z5227yZ+M1Y0PdpRlK0+ue4U4Pf7A8n+oXbQ+Shxbklax1PZYmn8768YH9Gkr6A4UYWj3czPjNCv2ReKn8Vpv62T/bT9kXip/Fab+tk/wBtb7Inu8hXjizQn9kXip/Fab+tk/21+eo8k3ixFt2Nsc2e/ZXYx/eaFv8AKMJ7vIOOJ886vyXOMcLntisNFU7RkGO4wgO8BucP88LoblwB4w27d1nQtwdt/h5Ip88vV0b3L6VrC+OOpxo3hNqPUIk6Oanontp3ZwRM/wBCL/W5qyjq5t0R40j5eyRvjkdHI0texxa5p7wR3hQApJaTydlF6VUaH4KZTK5MJhTaSzjKLkwmFaFnGi5MJhKFnGi5MJhKFnHlO9cmEwlCymFGFyYTCUUphRhcmEwlEs40C5MJhKKUUZXJhMJtJZOCtqPIo4N0l4LeI+pqUTU1PMWWmlkblskjTh0zh6w08mj3gT6gtbNL2ap1DqW2WGiH/M3GripYuWcOe4NBPhzX1L0tZaHTmnLdYbazZR2+mjp4RyztY0DJ8TjJPrJK0a3K4R2r7M8a82cl/vNp0/a5bpe7lSW2hhGZKiplbGxvhuPLJ9Q9a8C1z5XnD6zSSwadobjqSZnLpGDq0BP/AHvBd/MMIWuXldak1rd+L91tGqny01Jbpy23UTHHoGwH8Erc/iL24Jd35yOWMDxtrHO/DzXPh0sWrkbJTa6NoLx5Z2sJZHeaNI2Glj/KKt8s5H67XMyujn8r7inJKXsodMwtP5GUcuB/WUleANpyRzdj+S9F8m/R8WreM+nbTLF0tMyqFXUg/hMUP9o4O8HbQ3/3Lo9tCCbaNanJszf9rvit/D6c+jk/3E/a74q/w+nPo5P9xb4C1WzGPN1J/gt+yC02v/02j/wG/ZcLzY/8Dbtk/s0Qb5XvFVr2k0um3AEEtNHJgj2cpc/0X74PLI4kCRpmsGk3M9YZT1DSf5mY4/ov3+XzdqSfW9i0tRRQwsttG6pnETA3MkpwA7HeQxjSP+9a0GmaRy5LthgjOKe01ylJOjZ23+WfqWN2a/RdonGefQVUkRx/MOWK+UF5Rs/FPQtLpqm01JYh11tTUv68JxK1gcGsHoN5ZLXHxaF4V1ZvflT1c+9/ks1pIxdpGO+TOOlYXBxzhcwbn14V42hjNoTC6YxpGDdldvihHirkJhVJA48JhchCYTaiWceEwuTHihCbUDjwmFyYUgckpA49vihCvjKYRIpTHihCthSjQOPCYXIQmFasHHhSQr48UxySiHHhMK+EwlBnpXkxupmce9Imrc1rOu4bk97yxwYP7xavpMvk7b6ypt1fTV9FK6GpppmTQyN72PactcPEEAr6Q8DeJ1m4laQprhSTwxXWKNrbjQg4fBJ3Egd+wkZafZy7wQPO9RxO1NG/E1VH4+PHBrTnFizRQ3Bz6G60oIo7jE0Oewd5Y4fnYfZkEHmCOedH+K3B/W/Dipcb1bTPbt2I7jS5fTuz3ZOMsPg4A+zI5r6XLx3yoeLVu4baNdRxNgq79dYnRUlLI0PaxhBDpZGnlsHcAfxHl3B2OfTZ5xkoryZTj4s+ee3xW23/AA/dJuBv+tqiLkQ23UjyP0klx/8AUM/qtTHOMji8lpLiSdrQBkn2DuX0y4D6UZorhPYLAWBtTHSiarwOfTyem/P6FxaPBoXdr8mzHt/Zrxrc7M5XHVTw0tNLU1ErYoYmF8j3HAa0DJJPsAXIvIfLA1MdM8CL4YpejqrmGW2Dn+LpTiQf4YkXkQjukkdEnSs0K4s6tl1zxIvuqnl2yvq3Pga4c2wj0YmnxDA0LpWjDQCvyU7Nzx7Av2r6HFConJJ2VRWRbaMbK4W2PkrTaJ1ZWRaZtnCK0z0VBT9Pdr1d3x1kplIwwNDosNLnDk0EDa1xxkc9UFs9JUT8JvI6pX0H/L33W05L5fzxwSMOHD/4mNA9hlJC5dUvxUV2zKHdn5rhxd1tqTiBdNGcItJafjpTNJFRGlt0ZldGz0emL3Yja0/iBcMDIGT3nySp4VcT6uyVGq6rS90mpX1G2SoeQ6SaRztu5rM73hzjgFoIOcg81n/DGpqODvA6s4jtY12qNVSG2WQyc+rU7cl84aTzy5vId2WxnmCQsV0LR6gdZKjiDqfX9609YeuuHWYaiSSrrqotduELA5uXbHyAvJAAc4c8kLXF7W1Hrr+mdWcB4B8XhaTczoit6EN3FvTRdLj/AMe/f/pysO0npTUWq7w+0WC1VFbWxtc+SIYb0bWkAueXEBoBIySQAtkPJ/n0bZrJqXjE296rqIdPslhbFcpGhtS+Ro25DScvcXNGCcBzgcnkR0mjLyOEnAms1tNHDJqvXssjLfFKz0YqVud0pY7kW5duxzB3xd4yqs0m2v8Ahi0eT6c4R8RdQ2eW8WjSldVW+MPPWG7A14acO2bnDpOeR6Oc45ZWM6dsV51FcW26x2usuVW4buipYXSODcjLiAOQGe88gthuBepL9YNC6042akvNVWTU1MLRa6eolJilmJYQA3l6DT0YAbgAB/sXS8J9TcK5eG1y0Pqu4XrSt8u87JK28U7XFlRHu3RtI/LHtfzbt2nvz6hXmkrtdDaec6q4TcQdL6eZqC+aekp7U54YamOoimawk4G7o3OLefLmBz5Lj0Vwp4h6zoDXab0tW1tLzxO4thidjv2vkLQ7HhlezN4LVFr4uWnhxdtbVd10a2ikv0tMJHsYyGNzmkGIOLQ5xIG9uCQXY5heX3Dibqm88VItT6bkqGdTnxZ6GJhMdNTsJ6OIRNwA0MHMYweZPeslkc1+LVhowWlsV5qr8LDTWyrluvTmn6myJxmErThzC0DOQQQR6l3+uuGWutD0FJcNVadqLZR1bzHDM+SN7S/Gdp2OJacAnDsHkeXIr0nWdZU6H4SW26xVz5NacRXSXG43EANkZRnn0THfl6QvDnbcE82nkAvxcHqXU3ESp03oHUVZM3RUFVUXSYycjM2Jv9od55kDcGZHIdIT3hOST/L6RDA9D8Mtea2hln0vpmtuEEWd0/oxRZH5Q95a0u+UHK6mPSuo5dWO0pFZa6S+NldEaFkRdLvGcjb4AEk92Ble9Vuv9EUmsmavtOqLrqatpJdmm9NUFukpaGl5FsTXA4JA3ZIY0FxHPv5dxwXqezlv1nx84lwOqb5FXS0VDG7DXOqOccjWY5YJIjB57Q1/qCks81br+f0qVniOn+DnErUFTcaez6TrKh1uqZaSpcXxsjbNE7bIwPc4NcQRj0Sc+pdPpTQesdVagnsNh0/W1lxpnllTEGhggIJB6RziGs5jHpEc17V5L96vOouLly13qS7Gms+n6GprqoNyylpxIHARsjHotb6T3AAcyzPM811ui7pqLjR5QUMloHmuyU1w86z01NtgjigbK0vleG43zPJaC45cXO58hyPLNSa8eEErVnj990hqWyapfpa52erivbJGs6kxnSSPLhluwMzvyDy25yswfwB4vttRuR0RW9CG7i3poelx/wCLf0n8tuV6Bq6as15q28cbLjqOfRWk6Oc2y21lGHmurA0OaGQBpb6Txuy4uAG4jmGkjueA9bovT9l1VxXhvGrZzp+J0UUV1exsNRJKCGNywne9x2gtz6O4HJ5FYzzyStd/f9FGrZ7kwrdP073OJy4kl36lF1pWYMsu10hqa/6Pv9Pf9NXGWhuFOfRe38L2+tjh3OafWDyXWFqjb4LdLGpqmFJo2/0f5YdhfpyoOrLBU0t7p4C5jaM5p6qTHJuXHdFk479wHM59S1N1/qy9641ZW6kv9V09ZVOztGdkTB+GNgJ5NA5AfzOSSuvlgbKMnk724XHDSEPJeeQ7setccNGsTbiiubfZmHAnTHajixpqyyx9JFU1zHTMxnMTP7ST/Qxy+nze7ktBfIoFO3jzQiYAvNDUiDI/Psz/APkPW/YXn+o+Mij/AKN+HqwtMP8AiGao6zf9O6Ohly2jgfX1LWnkXvOyPPiGtef0etz18yfKU1CNT8ctU3KOTfTtrDTQn1bIQIgR4HZn+a0aSN5L/Rcr/EwSjYAwn1r9GFLI9jAApwvooRpHK2VwmFfamFnRCmFl/E3iTqbXMNBTXWojht1sibFQ0FO3bDCGtDc473OIaMk+04wOSxLChzN3IrCUE/NFToyziBxEvOtrbYqO4U9HSUFhoW0dDS0rC1jAGtDnHJJLnbG5545DxJ7/AE7xedR8K7foW6aJ07faa21Es9JPXskJY573PJIY5pPN5HIjIwDleZPjDmbM4HgrBoDcBa+CNVXRVJro9B1nxh1Hqzh5b9DzW6z0Fpo6h1QRQUradsri55a3YzDGtaH4wBzIBJJXScReIV612+0+coKOko7JRMoqCkpWFrIowAM+kSS4hrcnwHILFm02GAdK/wDqpbCBF0bTjxWKwRj9BybM2quJV6ruG2ndCOpaFlostS6qDOjJNVKZHvBlycEDeRgAZzzzyxk2qeOcmob0NQRcO9HUt7jY2NtykpHTyhzcbXhrndGXNw3Bc1xGBjuXkzo/Q2tdt9WcKhgAY1oeQB7D3o8EPHgKbM20XxY1npfiLLrqerbebpUsfFVmuy5s8bsZYcEYAw3AGAMAAY5LttXcaLzd7fW2PT+ntOaQtddEYqqGzUDIXzsJyWvkAzg8gQMZGQe8rzQQAHJc536lQ+APcSHFv6KcEHLc0Xe0ev2njzdbfoe2aduWjdJ3+SzQdBa625UPTSUzcAcgTjIAaOWPwjOV0+m+NOtrZxIZr+aopa+5dV6k6GaHbB1b1RNYzbsaCARtxz588nPnLacBhaD3+tQKUA+lIXfqrwwttR7JvZ6XeeLjGNqDo7QWm9J1lUH9NX0MbnVLA8EOEL3cocgkZYAR6iF0+rOJV91BoKw6ImgoqCy2VodHDTNeHTy4OZZSXEOcS555Ac3FYa+ny7dvwf0UOphtI3Hc7vJSOGKI5WZdbOIl5pOFdZw7o6Wgp7ZW1gqauoZFioqAC0tjc7ONoLQe7PqzjObcNOI150HS6hpbHBTCe90jaR9VKCXwMG7JYAcbju7znGByWJtjDGBo5pHGGDvyfaq8MWqrsqnR6dbuNE0PC6g4eXHRenr3b7bK6enkrWy+i/c5wcWse3Lv7R4zkZBwR3rrdd8YNS6y0FbNF1NDaaK10FQagChpRAJHZftGxuGta0POA0DPeclefthwXnd+IY7u5Q2mwwN6V5WK00U7SG9nHAC97nnGO5cuFZrNjQ0KcLoUaRicgRWRbKJZTHimFdEoWdrorUNdpPV1r1JbnEVNvqGzNaHYDwPxNJ9jm5afAlfS/QeqbXrPSdv1JZ5eko62IPaM+lG7ucx3sc0gg+IXy7Xqfk/caLnwsuU0U9NJctPVbg6ro2ODXRv/AHseeW7He04DgBzGARweoaXljuj2jdimoumfQ5aicQfJEudx1NXXfTeq6LoKyrlqBTXCF7DCHuLtoezduwT6wFsroDXWlNdWlty0veqW4R7QZI2PxLCT6nsPpNP6j9MhZMvChOeJ+PB0NKRpXReSFrR7Qa7VGn4ORz0PTSgH1d7GrLdP+R7a4wHX7WlZUjPpR0VI2LHhue5+f12raZfjvVwp7RZq261R209HTyVEp9jWNLj/AJBdD1+f6ZjxxPmjxctFk09xKvti086odb7fVGmjdO8OeXMAa8kgAfjDvUsWylxutTdrvV3Cpw6ernfNI488uc4uP+ZVgcr6HEltSORlcJhXRZEbKYTCuitCyqjCuigsqEVkV6FlVHNXRRoWUwpVkV6DdFSFGFdEoJ2UwmFdFGhZTClWRXoWVUYV0QWEUos6I/BCKUQEKFZEKRbau6Wa4suVmuVXb6tn4JqSZ0Mjf0c0gr0W0+UZxktMDYBq19VG3uFXSQyu7/fczef5krztFzZNLDI7aM1ka6PV6vyp+ME7QI7tbabHeYrdGSf7wKw7VXGTihqalnpLxrS6S0tRG6KaCFzYI5GOyHNc2MNDmkHBBGCOSxgtafUEDWjuAC1LRwj0i8r+z8NEx3SEuaW49q/cpKjC6oR2qjU5WETCYWdAImEwr0AiYTCgCJhMIAiYTCoCJhMKAImEwqAiYTCgCJhMKgImEwoCURFQEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAc3ZvV3wxe/oZPsnZvV3wze/oZPstxPNcn7tT5qk9xfOP1HIjt4oo067O6u+GL39DJ9k7O6u+GL39DJ9luL5ok9xPNEnuLH5DIxxRRp12b1d8M3v6GT7J2b1d8M3v6GT7LcTzVJ+7U+apPcV+QyIcUUaddndXfDF7+hk+ydndXfDF7+hk+y3E80Se4nmiT3EevyMnBE077N6u+Gb39DJ9k7N6u+GL39DJ9luKbVJ+7UeapPcT5DIi8UWad9ndXfDF8+hk+ydndXfDF7+hk+y3F80Se4nmiT3EevyMnFFmnXZvV3wze/oZPsnZvV3wxe/oZPstxTapP3ajzVJ7ifIZEXiizTvs7q74Yvn0Mn2Ts7q74Yvf0Mn2W4vmiT3E80Se4j1+Rk4os067N6u+Gb39DJ9k7N6u+GL39DJ9luKbVJ+7UeapPcT5DIi8UWad9ndXfDF8+hk+ydndXfDF7+hk+y3F80Se4nmiT3EevyMnFFmnXZvV3wze/oZPsnZvV3wxe/oZPstxTapP3ajzVJ7ifIZEXiizTvs7q74Yvn0Mn2Ts7q74Yvf0Mn2W4vmiT3E80Se4j1+Rk4os067N6u+Gb39DJ9k7N6u+GL39DJ9luKbVJ+7UeapPcT5DIi8UWad9ndXfDF8+hk+ydndXfDF7+hk+y3F80Se4nmiT3EevyMnFFmnXZvV3wze/oZPsnZvV3wxe/oZPstxTapP3ajzVJ7ifIZEXiizTvs7q74Yvn0Mn2Ts7q74Yvf0Mn2W4vmiT3E80Se4j1+Rjiiz1HzF/008xf9NZ31WNOqxrgNpgnZ/5E7P8AyLO+qxp1WNAYJ2f+RPMHyLO+qxp1WNAYJ2f+ROz/AMizvqsadVjQGCdn/kTs/wDIs76rGnVY0BgnZ/5E7P8AyLO+qxp1WNAYJ2f+ROz/AMizvqsadVjQGCdn/kTs/wDIs76rGnVY0BgnZ/5E7P8AyLO+qxp1WNAYJ2f+ROz/AMizvqsadVjQGCdn/kTs/wDIs76rGnVY0BgnZ/5E7P8AyLO+qxp1WNAYJ2f+ROz/AMizvqsadVjQGCdn/kTs/wDIs76rGnVY0BgnZ/5E7P8AyLO+qxp1WNAYJ2f+ROz/AMizvqsadVjQH6UREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREB//Z" alt="Transccema">
+  <div>
+    <div class="topo-nome">Transccema Transportes</div>
+    <div class="topo-sub">Assinatura de fechamento</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="card" id="card-dados" style="display:none">
+    <div class="card-head">📋 Fechamento de viagem</div>
+    <div class="card-body">
+      <div class="grid">
+        <div><div class="lbl">Motorista</div><div class="val" id="d-mot">—</div></div>
+        <div><div class="lbl">Envelope</div><div class="val" id="d-env">—</div></div>
+        <div><div class="lbl">Saída</div><div class="val" id="d-saida">—</div></div>
+        <div><div class="lbl">Retorno</div><div class="val" id="d-ret">—</div></div>
+        <div><div class="lbl">Diárias trabalhadas</div><div class="val" id="d-dias">—</div></div>
+        <div><div class="lbl">Nota Gobrax</div><div class="val" id="d-gb">—</div></div>
+        <div><div class="lbl">Folgas em casa</div><div class="val" id="d-fcasa">—</div></div>
+        <div><div class="lbl">Folgas fora</div><div class="val" id="d-ffora">—</div></div>
+        <div><div class="lbl">Adiant. de diárias</div><div class="val" id="d-adt">—</div></div>
+        <div><div class="lbl">Despesas</div><div class="val" id="d-desp">—</div></div>
+      </div>
+      <div id="d-paradas" style="margin-top:12px;display:none">
+        <div class="lbl" style="margin-bottom:6px">Paradas / Fretes</div>
+        <div id="d-paradas-lista"></div>
+      </div>
+      <div class="total-row">
+        <span class="total-lbl">Pagamento líquido</span>
+        <span class="total-val" id="d-total">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-assn" style="display:none">
+    <div class="card-head">✍ Assine para confirmar</div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--t3);margin-bottom:12px;text-align:center;line-height:1.5">
+        Assine com o dedo confirmando que está de acordo com o fechamento
+      </p>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="canvas"></canvas>
+        <div class="canvas-ph" id="canvas-ph">
+          <span class="ico">✍</span>
+          <span class="txt">Assine aqui com o dedo</span>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn btn-limpar" onclick="limpar()">Limpar</button>
+        <button class="btn btn-confirmar" id="btn-conf" onclick="confirmar()">
+          ✅ Confirmar e gerar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sucesso" id="sucesso">
+    <div class="ico">✅</div>
+    <div class="tit">Assinatura confirmada!</div>
+    <div class="sub" id="sucesso-txt"></div>
+    <div id="notif-status" style="display:none;font-size:11px;margin-top:8px;
+      padding:6px 12px;border-radius:6px;background:rgba(255,255,255,.1)"></div>
+    <button class="btn-pdf" onclick="baixarPDF()">
+      📄 Baixar PDF assinado
+    </button>
+    <button class="btn-wpp" onclick="enviarWpp()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Enviar PDF pelo WhatsApp
+    </button>
+  </div>
+
+  <div class="erro" id="erro">
+    ⚠️ Link inválido ou expirado. Solicite um novo link ao responsável.
+  </div>
+
+</div>
+
+<!-- Notificação via EmailJS -->
+
+<script>
+const fmt = v => 'R$ ' + Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const fmtD = v => { if(!v) return '—'; const p=String(v).slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+
+let dados = null;
+let assinaturaDataUrl = null;
+let dataHoraAssn = null;
+
+// Ler dados da hash
+try {
+  const hash = window.location.hash.slice(1);
+  if(!hash) throw new Error('sem hash');
+  dados = JSON.parse(decodeURIComponent(atob(hash)));
+} catch(e) {
+  document.getElementById('erro').style.display='block';
+  dados = null;
+}
+
+if(dados) {
+  document.getElementById('card-dados').style.display='block';
+  document.getElementById('card-assn').style.display='block';
+  document.getElementById('d-mot').textContent    = dados.motorista || '—';
+  document.getElementById('d-env').textContent    = dados.envelope  || '—';
+  document.getElementById('d-saida').textContent  = fmtD(dados.saida);
+  document.getElementById('d-ret').textContent    = fmtD(dados.retorno);
+  document.getElementById('d-dias').textContent   = (dados.diarias||0)+' diárias';
+  document.getElementById('d-gb').textContent     = (dados.nota_gobrax||0)+' pts';
+  document.getElementById('d-adt').textContent    = dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—';
+  document.getElementById('d-desp').textContent   = dados.despesas_str || '—';
+  document.getElementById('d-fcasa').textContent  = dados.folgas_casa > 0 ? dados.folgas_casa+' dia(s)' : '—';
+  document.getElementById('d-ffora').textContent  = dados.folgas_fora > 0 ? dados.folgas_fora+' dia(s)' : '—';
+  document.getElementById('d-total').textContent  = fmt(dados.pagamento_liquido||0);
+  // Paradas
+  if(dados.paradas && dados.paradas.length) {
+    document.getElementById('d-paradas').style.display='block';
+    document.getElementById('d-paradas-lista').innerHTML = dados.paradas
+      .filter(p=>p.frete>0||p.cliente)
+      .map(p=>`<div class="parada-item"><span class="parada-cli">${p.cliente||'—'}${p.rota?' · '+p.rota:''}</span><span class="parada-val">${p.frete>0?fmt(p.frete*0.88):'—'}</span></div>`)
+      .join('');
+  }
+}
+
+// Canvas
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let desenhando = false, temDesenho = false;
+
+function redim() {
+  const rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  canvas.width=rect.width*dpr; canvas.height=rect.height*dpr; ctx.scale(dpr,dpr);
+}
+function pos(e) {
+  const r=canvas.getBoundingClientRect(), s=e.touches?e.touches[0]:e;
+  return {x:s.clientX-r.left, y:s.clientY-r.top};
+}
+function iniciar(e) {
+  e.preventDefault(); desenhando=true;
+  const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);
+  document.getElementById('canvas-ph').style.opacity='0';
+}
+function desenhar(e) {
+  if(!desenhando) return; e.preventDefault();
+  const p=pos(e);
+  ctx.lineWidth=2.8; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0d2d6e';
+  ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x,p.y);
+  if(!temDesenho){temDesenho=true; document.getElementById('canvas-wrap').classList.add('signed');}
+}
+function parar(){desenhando=false;}
+
+canvas.addEventListener('mousedown', iniciar, {passive:false});
+canvas.addEventListener('mousemove', desenhar, {passive:false});
+canvas.addEventListener('mouseup', parar);
+canvas.addEventListener('mouseleave', parar);
+canvas.addEventListener('touchstart', iniciar, {passive:false});
+canvas.addEventListener('touchmove', desenhar, {passive:false});
+canvas.addEventListener('touchend', parar);
+window.addEventListener('resize', redim);
+redim();
+
+function limpar() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  temDesenho=false;
+  document.getElementById('canvas-ph').style.opacity='1';
+  document.getElementById('canvas-wrap').classList.remove('signed');
+}
+
+function confirmar() {
+  if(!temDesenho){alert('Por favor, assine na área acima antes de confirmar.');return;}
+  assinaturaDataUrl = canvas.toDataURL('image/png');
+  dataHoraAssn = new Date();
+
+  // Esconder, mostrar sucesso
+  document.getElementById('card-assn').style.display='none';
+  document.getElementById('sucesso').style.display='block';
+  document.getElementById('sucesso-txt').textContent =
+    'Motorista: ' + (dados.motorista||'—') + '\n' +
+    'Envelope: ' + (dados.envelope||'—') + '\n' +
+    'Assinado em: ' + dataHoraAssn.toLocaleString('pt-BR');
+
+  // Enviar email automático via Web3Forms (gratuito, sem servidor)
+  try {
+    const dtBR = dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
+
+    const payload = {
+      access_key:  '29a4d82c-fa49-43cd-b58b-746732182f16',
+      subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+      from_name:   'Transccema Transportes',
+      botcheck:    '',
+      message: [
+        '✅ FECHAMENTO ASSINADO DIGITALMENTE',
+        '',
+        'Motorista:    ' + (dados.motorista||'—'),
+        'Envelope:     ' + (dados.envelope||'—'),
+        'Saída:        ' + fmtD(dados.saida),
+        'Retorno:      ' + fmtD(dados.retorno),
+        'Diárias:      ' + (dados.diarias||0) + ' dias',
+        'Nota Gobrax:  ' + (dados.nota_gobrax||0) + ' pts',
+        'Adiantamento: ' + (dados.adiantamento>0?fmt(dados.adiantamento):'—'),
+        'Despesas:     ' + (dados.despesas_str||'—'),
+        '',
+        'PAGAMENTO LÍQUIDO: ' + fmt(dados.pagamento_liquido||0),
+        '',
+        'Data/hora da assinatura: ' + dtBR,
+        '',
+        '— Sistema de Fechamento Transccema'
+      ].join('\n')
+    };
+
+    fetch('https://api.web3forms.com/submit', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json','Accept':'application/json'},
+      body:    JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(r => {
+      const el = document.getElementById('notif-status');
+      if(r.success) {
+        console.log('✅ Email enviado');
+        if(el) { el.style.display='block'; el.style.color='#4ade80';
+          el.textContent='📧 Notificação enviada para felipe@transccema.com.br'; }
+      } else {
+        console.warn('Web3Forms erro:', r);
+        if(el) { el.style.display='block'; el.style.color='#fca5a5';
+          el.textContent='⚠️ Erro no envio: ' + (r.message||JSON.stringify(r)); }
+      }
+    })
+    .catch(e => {
+      console.warn('Email erro:', e);
+      const el = document.getElementById('notif-status');
+      if(el) { el.style.display='block'; el.style.color='#fca5a5';
+        el.textContent='⚠️ Erro de conexão: ' + e.message; }
+    });
+  } catch(e){ console.warn('Email:', e); }
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Gerar PDF com jsPDF
+function gerarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const W = 210, mg = 18;
+  let y = mg;
+
+  // Fundo do cabeçalho
+  doc.setFillColor(13, 45, 110);
+  doc.roundedRect(mg, y, W-mg*2, 22, 3, 3, 'F');
+
+  // Título
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('TRANSCCEMA TRANSPORTES', mg+6, y+9);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Fechamento de Viagem', mg+6, y+16);
+  y += 28;
+
+  // Dados do fechamento
+  doc.setTextColor(17, 24, 39);
+  doc.setFillColor(243,245,251);
+  doc.roundedRect(mg, y, W-mg*2, 72, 3, 3, 'F');
+  doc.setDrawColor(208,215,234);
+  doc.roundedRect(mg, y, W-mg*2, 72, 3, 3, 'S');
+  y += 7;
+
+  const campos = [
+    ['Motorista', dados.motorista||'—', 'Envelope', dados.envelope||'—'],
+    ['Saída', fmtD(dados.saida), 'Retorno', fmtD(dados.retorno)],
+    ['Diárias trabalhadas', (dados.diarias||0)+' dias', 'Nota Gobrax', (dados.nota_gobrax||0)+' pts'],
+    ['Folgas em casa', dados.folgas_casa>0?dados.folgas_casa+' dia(s)':'—', 'Folgas fora', dados.folgas_fora>0?dados.folgas_fora+' dia(s)':'—'],
+    ['Adiant. de diárias', dados.adiantamento>0?fmt(dados.adiantamento):'—', 'Despesas', dados.despesas_str||'—'],
+  ];
+
+  const colW = (W-mg*2-12)/2;
+  campos.forEach(([l1,v1,l2,v2]) => {
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(107,114,128);
+    doc.text(l1.toUpperCase(), mg+6, y);
+    doc.text(l2.toUpperCase(), mg+6+colW+6, y);
+    y += 4;
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+    doc.text(String(v1), mg+6, y);
+    doc.text(String(v2), mg+6+colW+6, y);
+    y += 7;
+  });
+
+  // Paradas
+  if(dados.paradas && dados.paradas.filter(p=>p.frete>0||p.cliente).length) {
+    y += 2;
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(107,114,128);
+    doc.text('PARADAS / FRETES', mg+6, y); y+=5;
+    dados.paradas.filter(p=>p.frete>0||p.cliente).forEach(p=>{
+      doc.setFillColor(255,255,255);
+      doc.roundedRect(mg, y-3.5, W-mg*2, 8, 1.5, 1.5, 'F');
+      doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39);
+      const txt = (p.cliente||'—') + (p.rota?' · '+p.rota:'');
+      doc.text(txt, mg+4, y+1, {maxWidth: colW*1.5});
+      doc.setFont('helvetica','bold'); doc.setTextColor(22,163,74);
+      doc.text(p.frete>0?fmt(p.frete*0.88):'—', W-mg-4, y+1, {align:'right'});
+      y+=10;
+    });
+  }
+
+  // Total
+  y += 4;
+  doc.setFillColor(13,45,110);
+  doc.roundedRect(mg, y, W-mg*2, 16, 3, 3, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('Pagamento líquido', mg+6, y+10);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.setTextColor(74,222,128);
+  doc.text(fmt(dados.pagamento_liquido||0), W-mg-6, y+10, {align:'right'});
+  y += 22;
+
+  // Assinatura
+  doc.setDrawColor(208,215,234);
+  doc.setFillColor(248,249,255);
+  doc.roundedRect(mg, y, W-mg*2, 52, 3, 3, 'FD');
+  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(107,114,128);
+  doc.text('ASSINATURA DO MOTORISTA', mg+6, y+8);
+
+  // Imagem da assinatura
+  if(assinaturaDataUrl) {
+    try {
+      doc.addImage(assinaturaDataUrl, 'PNG', mg+5, y+11, W-mg*2-10, 28, '', 'FAST');
+    } catch(e){}
+  }
+
+  // Linha de assinatura
+  doc.setDrawColor(13,45,110);
+  doc.setLineWidth(0.3);
+  doc.line(mg+10, y+42, W-mg-10, y+42);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
+  doc.text(dados.motorista||'Motorista', W/2, y+47, {align:'center'});
+  y += 56;
+
+  // Data e hora
+  doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(156,163,175);
+  const dtStr = dataHoraAssn
+    ? 'Assinado em: ' + dataHoraAssn.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})
+    : '';
+  doc.text(dtStr, W/2, y, {align:'center'});
+  y += 5;
+  doc.text('Transccema Transportes · Sistema de Fechamento de Viagem', W/2, y, {align:'center'});
+
+  return doc;
+}
+
+function baixarPDF() {
+  const doc = gerarPDF();
+  const mot = (dados.motorista||'motorista').split(' ')[0];
+  const env = dados.envelope||'senv';
+  const dt  = (dataHoraAssn||new Date()).toISOString().slice(0,10);
+  doc.save('fechamento_'+mot+'_env'+env+'_'+dt+'.pdf');
+}
+
+function enviarWpp() {
+  // Gerar e baixar o PDF
+  baixarPDF();
+  // Abrir WhatsApp
+  setTimeout(()=>{
+    const mot = dados.motorista||'—';
+    const env = dados.envelope||'—';
+    const dt  = (dataHoraAssn||new Date()).toLocaleString('pt-BR');
+    const msg = `✅ *Fechamento assinado — Transccema*\n\nMotorista: *${mot}*\nEnvelope: ${env}\nPagamento: ${fmt(dados.pagamento_liquido||0)}\n\nAssinado em: ${dt}\n_(PDF em anexo)_`;
+    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  },800);
+}
+</script>
+</body>
+</html>
