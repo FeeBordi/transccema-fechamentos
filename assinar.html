@@ -210,18 +210,19 @@ function confirmar() {
     const githubUrl = 'https://api.github.com/repos/FeeBordi/transccema-fechamentos/contents/' + nomeArq;
 
     // Upload da assinatura para Imgur (gratuito, sem token)
-    const formData = new FormData();
-    formData.append('image', imgB64);
-
     fetch('https://api.imgur.com/3/image', {
       method: 'POST',
-      headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
-      body: formData
+      headers: {
+        'Authorization': 'Client-ID 546c25a59c58ad7',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ image: imgB64, type: 'base64' })
     })
     .then(r => r.json())
     .then(r => {
-      console.log('Imgur:', r.success, r.data?.link);
-      const urlImagem = r.success ? r.data.link : '';
+      console.log('Imgur resposta:', JSON.stringify(r).substring(0,300));
+      const urlImagem = (r.success && r.data && r.data.link) ? r.data.link : '';
+      console.log('URL imagem:', urlImagem);
       return emailjs.send('service_ms29wao', 'template_ry3210s', {        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
         motorista:   dados.motorista  || '—',
         envelope:    dados.envelope   || '—',
