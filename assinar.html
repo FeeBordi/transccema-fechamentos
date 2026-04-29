@@ -196,19 +196,68 @@ function confirmar() {
   try {
     const dtBR = new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
     emailjs.init('m7evVV_nw-qO8ejln');
-    emailjs.send('service_ms29wao', 'template_ry3210s', {
-      subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
-      motorista:   dados.motorista  || '—',
-      envelope:    dados.envelope   || '—',
-      saida:       fmtD(dados.saida),
-      retorno:     fmtD(dados.retorno),
-      diarias:     String(dados.diarias||0) + ' dias',
-      nota_gobrax: String(dados.nota_gobrax||0) + ' pts',
-      adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
-      despesas:    dados.despesas_str || '—',
-      pagamento:   fmt(dados.pagamento_liquido||0),
-      data_hora:   dtBR,
-      assinado:    'SIM — Assinado digitalmente pelo motorista'
+    // Reduzir assinatura para tamanho pequeno
+    const off = document.createElement('canvas');
+    off.width = 300; off.height = 100;
+    const offCtx = off.getContext('2d');
+    offCtx.fillStyle = '#ffffff';
+    offCtx.fillRect(0, 0, 300, 100);
+    offCtx.drawImage(canvas, 0, 0, 300, 100);
+    const imgB64 = off.toDataURL('image/png').split(',')[1];
+
+    // Salvar imagem no GitHub (repositório público) via API
+    const nomeArq = 'assinaturas/' + dados.envelope + '_' + Date.now() + '.png';
+    const githubUrl = 'https://api.github.com/repos/FeeBordi/transccema-fechamentos/contents/' + nomeArq;
+
+    fetch(githubUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'token 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'
+      },
+      body: JSON.stringify({
+        message: 'Assinatura ' + dados.motorista + ' env ' + dados.envelope,
+        content: imgB64
+      })
+    })
+    .then(r => r.json())
+    .then(r => {
+      const urlImagem = r.content
+        ? 'https://raw.githubusercontent.com/FeeBordi/transccema-fechamentos/main/' + nomeArq
+        : '';
+      return emailjs.send('service_ms29wao', 'template_ry3210s', {
+        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+        motorista:   dados.motorista  || '—',
+        envelope:    dados.envelope   || '—',
+        saida:       fmtD(dados.saida),
+        retorno:     fmtD(dados.retorno),
+        diarias:     String(dados.diarias||0) + ' dias',
+        nota_gobrax: String(dados.nota_gobrax||0) + ' pts',
+        adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
+        despesas:    dados.despesas_str || '—',
+        pagamento:   fmt(dados.pagamento_liquido||0),
+        data_hora:   dtBR,
+        assinatura_url: urlImagem,
+        assinado:    'SIM — Assinado digitalmente pelo motorista'
+      });
+    })
+    .catch(() => {
+      // Se falhar o upload, envia email sem imagem mesmo
+      return emailjs.send('service_ms29wao', 'template_ry3210s', {
+        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+        motorista:   dados.motorista  || '—',
+        envelope:    dados.envelope   || '—',
+        saida:       fmtD(dados.saida),
+        retorno:     fmtD(dados.retorno),
+        diarias:     String(dados.diarias||0) + ' dias',
+        nota_gobrax: String(dados.nota_gobrax||0) + ' pts',
+        adiantamento:dados.adiantamento > 0 ? fmt(dados.adiantamento) : '—',
+        despesas:    dados.despesas_str || '—',
+        pagamento:   fmt(dados.pagamento_liquido||0),
+        data_hora:   dtBR,
+        assinatura_url: '',
+        assinado:    'SIM — Assinado digitalmente pelo motorista'
+      });
     })
     .then(r  => console.log('Email OK:', r.status))
     .catch(e => console.warn('Email erro:', e));
