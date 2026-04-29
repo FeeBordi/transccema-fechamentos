@@ -209,6 +209,9 @@ function confirmar() {
     const nomeArq = 'assinaturas/' + dados.envelope + '_' + Date.now() + '.png';
     const githubUrl = 'https://api.github.com/repos/FeeBordi/transccema-fechamentos/contents/' + nomeArq;
 
+    console.log('Enviando para GitHub:', githubUrl);
+    console.log('Tamanho imagem:', imgB64.length, 'chars');
+
     fetch(githubUrl, {
       method: 'PUT',
       headers: {
@@ -220,11 +223,15 @@ function confirmar() {
         content: imgB64
       })
     })
-    .then(r => r.json())
+    .then(r => { console.log('GitHub status:', r.status); return r.json(); })
     .then(r => {
-      const urlImagem = r.content
-        ? 'https://raw.githubusercontent.com/FeeBordi/transccema-fechamentos/main/' + nomeArq
-        : '';
+      console.log('GitHub resposta:', JSON.stringify(r).substring(0,200));
+      const urlImagem = r.content && r.content.download_url
+        ? r.content.download_url
+        : (r.content
+          ? 'https://raw.githubusercontent.com/FeeBordi/transccema-fechamentos/main/' + nomeArq
+          : '');
+      console.log('URL imagem:', urlImagem);
       return emailjs.send('service_ms29wao', 'template_ry3210s', {
         subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
         motorista:   dados.motorista  || '—',
