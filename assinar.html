@@ -209,31 +209,20 @@ function confirmar() {
     const nomeArq = 'assinaturas/' + dados.envelope + '_' + Date.now() + '.png';
     const githubUrl = 'https://api.github.com/repos/FeeBordi/transccema-fechamentos/contents/' + nomeArq;
 
-    console.log('Enviando para GitHub:', githubUrl);
-    console.log('Tamanho imagem:', imgB64.length, 'chars');
+    // Upload da assinatura para Imgur (gratuito, sem token)
+    const formData = new FormData();
+    formData.append('image', imgB64);
 
-    fetch(githubUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'token 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'
-      },
-      body: JSON.stringify({
-        message: 'Assinatura ' + dados.motorista + ' env ' + dados.envelope,
-        content: imgB64
-      })
+    fetch('https://api.imgur.com/3/image', {
+      method: 'POST',
+      headers: { 'Authorization': 'Client-ID 546c25a59c58ad7' },
+      body: formData
     })
-    .then(r => { console.log('GitHub status:', r.status); return r.json(); })
+    .then(r => r.json())
     .then(r => {
-      console.log('GitHub resposta:', JSON.stringify(r).substring(0,200));
-      const urlImagem = r.content && r.content.download_url
-        ? r.content.download_url
-        : (r.content
-          ? 'https://raw.githubusercontent.com/FeeBordi/transccema-fechamentos/main/' + nomeArq
-          : '');
-      console.log('URL imagem:', urlImagem);
-      return emailjs.send('service_ms29wao', 'template_ry3210s', {
-        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+      console.log('Imgur:', r.success, r.data?.link);
+      const urlImagem = r.success ? r.data.link : '';
+      return emailjs.send('service_ms29wao', 'template_ry3210s', {        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
         motorista:   dados.motorista  || '—',
         envelope:    dados.envelope   || '—',
         saida:       fmtD(dados.saida),
@@ -248,10 +237,9 @@ function confirmar() {
         assinado:    'SIM — Assinado digitalmente pelo motorista'
       });
     })
-    .catch(() => {
-      // Se falhar o upload, envia email sem imagem mesmo
-      return emailjs.send('service_ms29wao', 'template_ry3210s', {
-        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
+    .catch(err => {
+      console.warn('Imgur erro:', err);
+      return emailjs.send('service_ms29wao', 'template_ry3210s', {        subject:     dados.motorista + ' — Env. ' + dados.envelope + ' — Fechamento assinado',
         motorista:   dados.motorista  || '—',
         envelope:    dados.envelope   || '—',
         saida:       fmtD(dados.saida),
